@@ -30,7 +30,7 @@ def tag_release(c: Context):
         print(
             "Check https://github.com/snopoke/django-dataclass-forms/actions/workflows/release.yml for release build."
         )
-        print("Check https://github.com/taskbadger/django-dataclass-forms/releases and publish the release.")
+        print("Check https://github.com/snopoke/django-dataclass-forms/releases and publish the release.")
 
 
 def _get_version(c):
