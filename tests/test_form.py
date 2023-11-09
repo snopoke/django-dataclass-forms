@@ -1,5 +1,6 @@
 import dataclasses
 from datetime import date, datetime, time
+from typing import List
 
 import pytest
 from django.forms import fields, modelform_factory
@@ -27,7 +28,7 @@ def test_form_basics(dataclass_field, form_field):
 
 
 def test_form_field_classes():
-    d_class = dataclasses.make_dataclass("DataclassFormTest", [("to", list[str])])
+    d_class = dataclasses.make_dataclass("DataclassFormTest", [("to", List[str])])
     form = modelform_factory(d_class, form=DataclassForm, fields="__all__", field_classes={"to": fields.EmailField})
     assert list(form.base_fields) == ["to"]
     assert form.base_fields["to"].__class__ == fields.EmailField
