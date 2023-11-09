@@ -1,0 +1,39 @@
+on:
+  workflow_dispatch:
+    branches: [main]
+  release:
+    types:
+      - published
+
+name: PyPI Publish
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Install Poetry
+        uses: Gr1N/setup-poetry@v8
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+      - name: Checks
+        run: |
+          poetry --version
+          poetry check --no-interaction
+      - name: Install deps
+        run: poetry install --no-interaction
+      - name: Run tests
+        run: poetry run pytest -v
+      - name: Publish to PyPI
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          poetry config pypi-token.pypi $PYPI_TOKEN
+          poetry publish --build

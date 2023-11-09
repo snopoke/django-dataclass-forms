@@ -28,7 +28,7 @@ def form_field_for_dataclass_field(dataclass_field):
 
 def fields_for_dataclass(
     dataclass_type,
-    fields=None,
+    field_names=None,
     exclude=None,
     widgets=None,
     formfield_callback=None,
@@ -38,7 +38,7 @@ def fields_for_dataclass(
     field_classes=None,
 ):
     """
-    Return a dictionary containing form fields for the given model.
+    Return a dictionary containing form fields for the given dataclass.
 
     ``fields`` is an optional list of field names. If provided, return only the
     named fields.
@@ -47,30 +47,27 @@ def fields_for_dataclass(
     named fields from the returned fields, even if they are listed in the
     ``fields`` argument.
 
-    ``widgets`` is a dictionary of model field names mapped to a widget.
+    ``widgets`` is a dictionary of dataclass field names mapped to a widget.
 
-    ``formfield_callback`` is a callable that takes a model field and returns
+    ``formfield_callback`` is a callable that takes a dataclass field and returns
     a form field.
 
-    ``labels`` is a dictionary of model field names mapped to a label.
+    ``labels`` is a dictionary of dataclass field names mapped to a label.
 
-    ``help_texts`` is a dictionary of model field names mapped to a help text.
+    ``help_texts`` is a dictionary of dataclass field names mapped to a help text.
 
-    ``error_messages`` is a dictionary of model field names mapped to a
+    ``error_messages`` is a dictionary of dataclass field names mapped to a
     dictionary of error messages.
 
-    ``field_classes`` is a dictionary of model field names mapped to a form
+    ``field_classes`` is a dictionary of dataclass field names mapped to a form
     field class.
-
-    ``apply_limit_choices_to`` is a boolean indicating if limit_choices_to
-    should be applied to a field's queryset.
     """
     field_dict = {}
     ignored = []
 
     dataclass_fields = dataclasses.fields(dataclass_type)
     for f in dataclass_fields:
-        if fields is not None and f.name not in fields:
+        if field_names is not None and f.name not in field_names:
             continue
         if exclude and f.name in exclude:
             continue
@@ -84,10 +81,10 @@ def fields_for_dataclass(
             kwargs["help_text"] = help_texts[f.name]
         if error_messages and f.name in error_messages:
             kwargs["error_messages"] = error_messages[f.name]
-        if field_classes and f.name in field_classes:
-            kwargs["form_class"] = field_classes[f.name]
 
-        if formfield_callback is None:
+        if field_classes and f.name in field_classes:
+            formfield = field_classes[f.name](**kwargs)
+        elif formfield_callback is None:
             formfield = form_field_for_dataclass_field(f)(**kwargs)
         elif not callable(formfield_callback):
             raise TypeError("formfield_callback must be a function or callable")
@@ -98,8 +95,10 @@ def fields_for_dataclass(
             field_dict[f.name] = formfield
         else:
             ignored.append(f.name)
-    if fields:
-        field_dict = {f: field_dict.get(f) for f in fields if (not exclude or f not in exclude) and f not in ignored}
+    if field_names:
+        field_dict = {
+            f: field_dict.get(f) for f in field_names if (not exclude or f not in exclude) and f not in ignored
+        }
     return field_dict
 
 
@@ -144,7 +143,7 @@ class DataclassFormMetaclass(DeclarativeFieldsMetaclass):
                 # fields from the model"
                 opts.fields = None
 
-            fields = fields_for_dataclass(
+            form_fields = fields_for_dataclass(
                 opts.model,
                 opts.fields,
                 opts.exclude,
@@ -157,7 +156,7 @@ class DataclassFormMetaclass(DeclarativeFieldsMetaclass):
             )
 
             # make sure opts.fields doesn't specify an invalid field
-            none_fields = {k for k, v in fields.items() if not v}
+            none_fields = {k for k, v in form_fields.items() if not v}
             missing_fields = none_fields.difference(new_class.declared_fields)
             if missing_fields:
                 message = "Unknown field(s) (%s) specified for %s"
@@ -165,11 +164,11 @@ class DataclassFormMetaclass(DeclarativeFieldsMetaclass):
                 raise FieldError(message)
             # Override default model fields with any custom declared ones
             # (plus, include all the other declared fields).
-            fields.update(new_class.declared_fields)
+            form_fields.update(new_class.declared_fields)
         else:
-            fields = new_class.declared_fields
+            form_fields = new_class.declared_fields
 
-        new_class.base_fields = fields
+        new_class.base_fields = form_fields
 
         return new_class
 

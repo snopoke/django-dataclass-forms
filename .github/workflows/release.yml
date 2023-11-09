@@ -1,0 +1,64 @@
+on:
+  workflow_dispatch:
+    branches: [main]
+  push:
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+
+name: Create Release
+permissions:
+  contents: write
+
+jobs:
+  autorelease:
+    name: Create Release
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Install Poetry
+        uses: Gr1N/setup-poetry@v8
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+      - name: Checks
+        run: |
+          poetry --version
+          poetry check --no-interaction
+      - name: Add version to environment vars
+        run: |
+          PROJECT_VERSION=$(poetry version --short)
+          echo "PROJECT_VERSION=$PROJECT_VERSION" >> $GITHUB_ENV
+      - name: Check if tag version matches project version
+        run: |
+          TAG=$(git describe HEAD --tags --abbrev=0)
+          echo $TAG
+          echo $PROJECT_VERSION
+          if [[ "$TAG" != "v$PROJECT_VERSION" ]]; then exit 1; fi
+
+      - name: Checks
+        run: |
+          poetry --version
+          poetry check --no-interaction
+      - name: Install deps
+        run: poetry install --no-interaction
+      - name: Run tests
+        run: poetry run pytest -v
+      - name: Build
+        run: poetry build
+      - name: Create Release Draft
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: Release ${{ github.ref }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            dist/taskbadger-${{env.PROJECT_VERSION}}-py3-none-any.whl
+            dist/taskbadger-${{env.PROJECT_VERSION}}.tar.gz
