@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         # Explicitly also install tox-gh-actions to prevent tests from using system interpreter
         run: |
-          poetry install --no-interaction=
+          poetry install --no-interaction
           pip install tox-gh-actions
       - name: Run tox
         run: tox
