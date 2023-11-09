@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Simon Kelly <simongdkelly@gmail.com>"]
 readme = "README.md"
-packages = [{include = "django_dataclass_form"}]
+packages = [{include = "django_dataclass_forms"}]
 license = "MIT"
 classifiers = [
     "Development Status :: 4 - Beta",
