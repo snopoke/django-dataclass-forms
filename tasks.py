@@ -13,6 +13,8 @@ def test_all(c: Context):
 
 @task
 def tag_release(c: Context):
+    c.run("poetry check --no-interaction")
+
     version = _get_version(c)
     bump_key = input("Current version: {version}. Bump? [1: major, 2: minor, 3: patch / n]")
     if bump_key in ("1", "2", "3"):
